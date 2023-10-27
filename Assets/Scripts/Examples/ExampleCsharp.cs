@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace Lecture
 {
-    public class ExampleCsharp : MonoBehaviour
+    public class ExampleCsharp : ManagedClass
     {
         public int Integer;
         public List<int> List = new List<int>();
@@ -45,9 +45,9 @@ namespace Lecture
         }
 
         // Update is called once per frame
-        void Update()
+        public override void OnUpdate()
         {
-
+            Debug.Log("OnUpdate");
         }
 
         private void OnApplicationFocus(bool focus)
