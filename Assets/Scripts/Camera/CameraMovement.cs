@@ -14,18 +14,9 @@ public class CameraMovement : MonoBehaviour
 
     [SerializeField] private float CameraMoveSpeed = 120.0f;      // How fast the camera moves.
     public GameObject camFollowObj;                               // The follow target.
-    public float clampAngleMin,clampAngleMax;                              // How high/low we want to be able to look.
+    public float clampAngleMin,clampAngleMax;                     // How high/low we want to be able to look.
     public float inputSensitivity = 150.0f;
     public GameObject cam;
-
-
-    //Distance from player
-    private float camDistanceXtoPlayer;
-    private float camDistanceYtoPlayer;
-    private float camDistanceZtoPLayer;
-    //Mouse inputs
-    //public float mouseX;
-    //public float mouseY;
 
     private float finalInputX;
     private float finalInputZ;
@@ -39,8 +30,6 @@ public class CameraMovement : MonoBehaviour
 
     public bool AltPressed = false;                               //Used to determine when alt's pressed, so the cursor can appear                   
     private Vector3 followPos;
-
-
 
     public delegate void CameraDel();
 
@@ -112,7 +101,6 @@ public class CameraMovement : MonoBehaviour
         rotX = Mathf.Clamp(rotX, -clampAngleMin, clampAngleMax);
 
         Quaternion localRot = Quaternion.Euler(rotX, rotY, 0.0f);
-
         transform.rotation = localRot;
     }
 

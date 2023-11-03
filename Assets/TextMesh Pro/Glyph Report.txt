@@ -1,0 +1,12 @@
+Font: Unifont  Style: Regular
+Point Size: 73   SP/PD Ratio: 12,3%
+
+Characters included: 306/306
+Missing characters: 0
+Excluded characters: 0
+
+Characters missing from font file:
+----------------------------------------
+
+Characters excluded from packing:
+----------------------------------------

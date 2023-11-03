@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Unity.VisualScripting.InputSystem;
+using UnityEngine;
 
 public class CameraCollision : MonoBehaviour
 {
@@ -56,8 +57,9 @@ public class CameraCollision : MonoBehaviour
             distance = maxDistance;
         }
         Vector3 vel = Vector3.zero;
-        transform.localPosition = Vector3.Lerp(transform.localPosition, dollyDir * distance, 0.2f);
-        //transform.localPosition = Vector3.SmoothDamp(transform.localPosition, dollyDir * distance, ref vel, 0.2f);
+        //transform.localPosition = Vector3.Lerp(transform.localPosition, dollyDir * distance, 0.2f);
+        transform.localPosition = Vector3.MoveTowards(transform.localPosition, dollyDir * distance, distance);
+        //transform.localPosition = Vector3.SmoothDamp(transform.localPosition, dollyDir * distance, ref vel, 0.002f);
 
     }
 

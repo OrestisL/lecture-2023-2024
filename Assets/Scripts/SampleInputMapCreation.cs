@@ -336,7 +336,7 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
             }
 
             Vector3 moveDirection = Quaternion.Euler(0, targetAngle, 0) * Vector3.forward * currentSpeed;
-            controller.Move(Time.deltaTime * moveDirection.normalized);
+            controller.Move(Time.deltaTime * moveDirection);
 
             anim.SetFloat("Speed", currentSpeed);
         }

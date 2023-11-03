@@ -22,13 +22,14 @@ public class PrefabInstantiation : MonoBehaviour
         }
         //action += () => CreatePrefab(5);
         //action?.Invoke();
+        button = GetComponent<Button>();
         button.onClick.AddListener(() => CreatePrefab(5));
         onTriggered.AddListener((i) => CreatePrefab(i));
 
         onTriggered.Invoke(123);
     }
 
-    void CreatePrefab(int i) 
+    void CreatePrefab(int i)
     {
         //GameObject pf = Instantiate(prefab, Random.onUnitSphere, Quaternion.identity);
         //ItemProps props = pf.GetComponent<ItemProps>();
@@ -52,13 +53,14 @@ public class PrefabInstantiation : MonoBehaviour
         StartCoroutine(InstatiatePrefabs());
     }
 
-    IEnumerator InstatiatePrefabs() 
+    IEnumerator InstatiatePrefabs()
     {
         int i = 0;
         while (i < maxCount)
         {
-            Instantiate(prefab, UnityEngine.Random.onUnitSphere, Quaternion.identity);
+            GameObject current = Instantiate(prefab, UnityEngine.Random.onUnitSphere, Quaternion.identity);
             i++;
+            current.GetComponent<AbstractPrefabClass>().SetColor(UnityEngine.Random.ColorHSV());
             yield return new WaitForEndOfFrame();
         }
 
