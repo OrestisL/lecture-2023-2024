@@ -11,9 +11,9 @@ public class ManagedClass : MonoBehaviour
         }
         controller.AddObject(this);
     }
-    public virtual void OnUpdate() { Debug.Log(string.Format("{0} Update", GetType().Name)); }
-    public virtual void OnLateUpdate() { Debug.Log(string.Format("{0} LateUpdate", GetType().Name)); }
-    public virtual void OnFixedUpdate() { Debug.Log(string.Format("{0} FixedUpdate", GetType().Name)); }
+    public virtual void OnUpdate() { }
+    public virtual void OnLateUpdate() { }
+    public virtual void OnFixedUpdate() { }
 
     public virtual void OnDisable()
     {

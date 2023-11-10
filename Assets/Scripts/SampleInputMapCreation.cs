@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.InputSystem;
 using System.IO;
+using UnityEngine.AI;
 
 /// <summary>
 /// Sample code for creating an action map.
@@ -70,7 +71,8 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
     //gamepad zoom is weird
     private bool isZooming;
     //charge attack
-
+    [SerializeField]
+    private NavMeshAgent currentAgent;
     public override void Awake()
     {
         base.Awake();
@@ -248,8 +250,34 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
         };
 
         fireAction = playerInput.currentActionMap.FindAction("Fire");
-        fireAction.performed += context => { };
+        fireAction.performed += context => 
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.value);
+            if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
+            {
+                if (currentAgent == null) //no agent selected
+                {
+                    if (hit.transform.TryGetComponent(out currentAgent))
+                    {
+                        return;
+                    }
+                }
+                else //agent selected
+                {
+                    if (NavMesh.SamplePosition(hit.point, out NavMeshHit navHit, 2.0f, NavMesh.AllAreas)) 
+                    {
+                        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                        cube.transform.position = navHit.position;
+                        cube.transform.localScale = Vector3.one * 0.5f;
+                        cube.transform.up = hit.normal;
+                        currentAgent.SetDestination(navHit.position);
+                    }
+                }
+
+            }
+        };
         fireAction.canceled += context => { };
+
         zoomAction = playerInput.currentActionMap.FindAction("Zoom");
         if (playerInput.currentActionMap.name.Equals("Keyboard"))
         {
