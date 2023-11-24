@@ -34,6 +34,7 @@ public class GenericSingleton<T> : MonoBehaviour where T : Component
         else
         {
             Destroy(gameObject);
+            return;
         }
     }
 }

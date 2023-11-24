@@ -1,6 +1,10 @@
+using UnityEngine.SceneManagement;
+using System.Collections;
+using UnityEngine;
+
 namespace Lecture
 {
-    public class Person 
+    public class Person
     {
         public string Name { get { return _name; } private set { _name = value; } }
         private string _name;
@@ -16,6 +20,43 @@ namespace Lecture
             Name = name;
             LastName = lastname;
             Age = age;
+        }
+    }
+
+    public class Util
+    {
+        public static void ChangeScene(int index)
+        {
+            //get loading scene
+            SceneManager.LoadScene(0);
+            SceneLoader.Instance.StartCoroutine(ChangeSceneAsync(index));
+        }
+        public static void ChangeScene(string name)
+        {
+            //get loading scene
+            SceneManager.LoadScene(0);
+            SceneLoader.Instance.StartCoroutine(ChangeSceneAsync(name));
+        }
+        private static IEnumerator ChangeSceneAsync(int index)
+        {
+            AsyncOperation asyncOp = SceneManager.LoadSceneAsync(index);
+            //asyncOp.allowSceneActivation = false;
+            while (!asyncOp.isDone)
+            {
+                yield return null;
+            }
+
+        }
+
+        private static IEnumerator ChangeSceneAsync(string sceneName) 
+        {
+            AsyncOperation asyncOp = SceneManager.LoadSceneAsync(sceneName);
+            //asyncOp.allowSceneActivation = false;
+            while (!asyncOp.isDone)
+            {
+                yield return null;
+            }
+
         }
     }
 

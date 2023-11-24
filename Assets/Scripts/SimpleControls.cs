@@ -8,6 +8,7 @@ public class SimpleControls : MonoBehaviour
 {
     public InputActionAsset controls;
     [SerializeField] private NavMeshAgent currentAgent;
+    public Camera main, cam;
 
     private void Start()
     {
@@ -40,5 +41,11 @@ public class SimpleControls : MonoBehaviour
         };
 
         controls.FindAction("rightclick").performed += context => { currentAgent = null; };
+
+        controls.FindAction("middleclick").performed += ctx => 
+        {
+            main.enabled = !main.enabled;
+            cam.enabled = !cam.enabled;
+        };
     }
 }

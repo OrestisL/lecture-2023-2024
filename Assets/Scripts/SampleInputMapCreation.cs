@@ -2,6 +2,7 @@
 using UnityEngine.InputSystem;
 using System.IO;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Sample code for creating an action map.
@@ -11,10 +12,11 @@ using UnityEngine.AI;
 /// </summary>
 public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
 {
-    private CharacterController controller;
-    private Camera cam;
-    private CameraCollision camCollision;
-    private CameraMovement camMovement;
+    [SerializeField] private CharacterController controller;
+    [SerializeField] private Camera cam;
+    [SerializeField] private CameraCollision camCollision;
+    [SerializeField] private CameraMovement camMovement;
+    [SerializeField] private FirstPersonMovement firstPersonMovement;
     public UnityEngine.UI.Button button;
 
     public GameObject player;
@@ -25,11 +27,18 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
         gamepad
     }
 
+    public enum PerspectiveType
+    {
+        firstPerson,
+        thirdPerson
+    }
     /// <summary>
     /// Determines the movement type.
     /// 0 = keyboard, 1= gamepad
     /// </summary>
     public MovementType movementType;
+
+    public PerspectiveType perspectiveType;
 
     /// <summary>
     /// This component is used to handle inputs from the user.
@@ -73,8 +82,9 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
     //charge attack
     [SerializeField]
     private NavMeshAgent currentAgent;
+    private int previousSceneIndex;
     public override void Awake()
-    {
+   {
         base.Awake();
 
         saveDir = Path.Combine(Application.persistentDataPath, "InputJson");
@@ -87,17 +97,6 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
             Debug.Log("JsonInput folder doesnt exist, creating");
             Directory.CreateDirectory(saveDir);
         }
-    }
-
-    private void Start()
-    {
-        button.onClick.AddListener(() => ChangeActionMap(movementType));
-        //check if player input exists on the gameObject
-        if (playerInput == null)
-        {
-            if (!TryGetComponent<PlayerInput>(out playerInput))
-                playerInput = gameObject.AddComponent<PlayerInput>();
-        }
 
         //check if json exists
         jsonPath = Path.Combine(saveDir, "DefaultConrtols.json");//InputJson/defaultControls.json";
@@ -107,10 +106,36 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
             File.Create(jsonPath).Close(); //System.IO.File.Create(string path) is a stream, so calling .Close() on the stream allows us
                                            //to create the file and close it so we can read/write on it from other streams
         }
+        //check if player input exists on the gameObject
+        if (playerInput == null)
+        {
+            if (!TryGetComponent<PlayerInput>(out playerInput))
+                playerInput = gameObject.AddComponent<PlayerInput>();
+        }
+        InitializeInputs();
+    }
+    private void Start()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
 
+    }
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+
+        if (previousSceneIndex == scene.buildIndex)
+            return;
+
+        previousSceneIndex = scene.buildIndex;
+        if (scene.buildIndex == 3)
+        {
+            perspectiveType = PerspectiveType.thirdPerson;
+        }
+        InitializeInputs();
+    }
+    private void InitializeInputs()
+    {
         //create input actions and action maps
         CreateActions();
-
         if (player == null)
             player = GameObject.FindGameObjectWithTag("Player");
 
@@ -121,11 +146,18 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
         if (anim == null)
             anim = player.GetComponent<Animator>();
 
-        if (cam == null)
-            cam = Camera.main;
+        cam = Camera.main;
 
-        camMovement = cam.GetComponentInParent<CameraMovement>();
-        camCollision = cam.GetComponent<CameraCollision>();
+        switch (perspectiveType)
+        {
+            case PerspectiveType.firstPerson:
+                firstPersonMovement = player.GetComponent<FirstPersonMovement>();
+                break;
+            case PerspectiveType.thirdPerson:
+                camMovement = cam.GetComponentInParent<CameraMovement>();
+                camCollision = cam.GetComponent<CameraCollision>();
+                break;
+        }
 
         ChangeActionMap(movementType);
     }
@@ -243,14 +275,25 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
         lookAction = playerInput.currentActionMap.FindAction("Look");
         lookAction.performed += context =>
         {
-            if (movementType == MovementType.keyboard)
-                camMovement.HandleRotationMovement(context.ReadValue<Vector2>() * mouseSensitivity);
-            else if (movementType == MovementType.gamepad)
-                camMovement.HandleRotationMovement(50 * mouseSensitivity * context.ReadValue<Vector2>());
+            switch (perspectiveType)
+            {
+                case PerspectiveType.thirdPerson:
+                    if (movementType == MovementType.keyboard)
+                        camMovement.HandleRotationMovement(context.ReadValue<Vector2>() * mouseSensitivity);
+                    else if (movementType == MovementType.gamepad)
+                        camMovement.HandleRotationMovement(50 * mouseSensitivity * context.ReadValue<Vector2>());
+                    break;
+
+                case PerspectiveType.firstPerson:
+                    firstPersonMovement.CameraRotation(context.ReadValue<Vector2>() * mouseSensitivity);
+                    break;
+            }
+
+
         };
 
         fireAction = playerInput.currentActionMap.FindAction("Fire");
-        fireAction.performed += context => 
+        fireAction.performed += context =>
         {
             Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.value);
             if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
@@ -264,7 +307,7 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
                 }
                 else //agent selected
                 {
-                    if (NavMesh.SamplePosition(hit.point, out NavMeshHit navHit, 2.0f, NavMesh.AllAreas)) 
+                    if (NavMesh.SamplePosition(hit.point, out NavMeshHit navHit, 2.0f, NavMesh.AllAreas))
                     {
                         GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
                         cube.transform.position = navHit.position;
@@ -281,15 +324,22 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
         zoomAction = playerInput.currentActionMap.FindAction("Zoom");
         if (playerInput.currentActionMap.name.Equals("Keyboard"))
         {
-            zoomAction.performed += context => {
-                Debug.Log(context.ReadValue<float>());
-                camCollision.Zoom(context.ReadValue<float>() * scrollSensitivity); }; 
+            zoomAction.performed += context =>
+            {
+                if (perspectiveType == PerspectiveType.thirdPerson)
+                {
+                    Debug.Log(context.ReadValue<float>());
+                    camCollision.Zoom(context.ReadValue<float>() * scrollSensitivity);
+                }
+            };
         }
         else if (playerInput.currentActionMap.name.Equals("Gamepad"))
         {
-
-            zoomAction.started += context => { isZooming = true; };
-            zoomAction.canceled += context => { isZooming = false; };
+            if (perspectiveType == PerspectiveType.thirdPerson)
+            {
+                zoomAction.started += context => { isZooming = true; };
+                zoomAction.canceled += context => { isZooming = false; };
+            }
         }
 
         jumpAction = playerInput.currentActionMap.FindAction("Jump");
@@ -351,12 +401,14 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
 
         if (inputDirection.magnitude > 0.1f)
         {
+            Debug.Log("move");
             float currentSpeed = speed;
             //apply camera rotation to player 
             float targetAngle = cam.transform.eulerAngles.y + Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg;
             float angle = Mathf.SmoothDampAngle(player.transform.eulerAngles.y, targetAngle, ref turnSmoothVelocity, turnSmoothTime);
 
-            player.transform.localRotation = Quaternion.Euler(0, angle, 0);
+            if (perspectiveType == PerspectiveType.thirdPerson)
+                player.transform.localRotation = Quaternion.Euler(0, angle, 0);
 
             if (isRunning)
             {
@@ -366,10 +418,10 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
             Vector3 moveDirection = Quaternion.Euler(0, targetAngle, 0) * Vector3.forward * currentSpeed;
             controller.Move(Time.deltaTime * moveDirection);
 
-            anim.SetFloat("Speed", currentSpeed);
+            //anim.SetFloat("Speed", currentSpeed);
         }
-        else
-            anim.SetFloat("Speed", 0);
+        //else
+        //anim.SetFloat("Speed", 0);
     }
 
     void Jump(float height)
@@ -403,6 +455,11 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
             if (playerInput != null && playerInput.actions != null)
                 playerInput.actions.Enable();
         }
+    }
+
+    private void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     private void OnApplicationQuit()
