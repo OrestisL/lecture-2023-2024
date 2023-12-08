@@ -1,13 +1,17 @@
 using UnityEngine.UI;
 using UnityEngine;
+using System.IO;
 using System.Collections;
 using UnityEngine.SceneManagement;
+using System.Collections.Generic;
 
 public class Sounds : GenericSingleton<Sounds>
 {
     private AudioSource bgMusicSource;
     private AudioSource sfxSource;
+    public List<string> BGMs = new List<string>();
     public SoundSettings soundSettings;
+
 
     [Range(1f, 5f)]
     public float FadeOutSeconds = 2f;
@@ -19,23 +23,32 @@ public class Sounds : GenericSingleton<Sounds>
     public override void Awake()
     {
         base.Awake();
-
+        soundSettings = new SoundSettings();
+        soundSettings.FromJson();
         bgMusicSource = gameObject.AddComponent<AudioSource>();
-        bgMusicSource.spatialBlend = 0.0f;
-        bgMusicSource.volume = soundSettings.BGMusicVolume;
-        bgMusicSource.loop = true;
-        bgMusicSource.mute = soundSettings.MuteBGM;
-        if (bgMusicSource.mute)
-        {
-            bgMusicSource.Stop();
-            NotificationManager.Instance.AddNotification("BGM Source is muted!", 2f);
-        }
-
         sfxSource = gameObject.AddComponent<AudioSource>();
-        sfxSource.spatialBlend = 1.0f;
-        sfxSource.volume = soundSettings.SFXVolume;
-        sfxSource.mute = soundSettings.MuteBGM;
 
+        if (!soundSettings.Created)
+        {
+            soundSettings = new SoundSettings(bgMusicSource.volume, sfxSource.volume, bgMusicSource.mute, sfxSource.mute, BGMs);
+        }
+        else
+        {
+            bgMusicSource.spatialBlend = 0.0f;
+            bgMusicSource.volume = soundSettings.BGMusicVolume;
+            bgMusicSource.loop = true;
+            bgMusicSource.mute = soundSettings.MuteBGM;
+            if (bgMusicSource.mute)
+            {
+                bgMusicSource.Stop();
+                NotificationManager.Instance.AddNotification("BGM Source is muted!", 2f);
+            }
+
+
+            sfxSource.spatialBlend = 1.0f;
+            sfxSource.volume = soundSettings.SFXVolume;
+            sfxSource.mute = soundSettings.MuteBGM;
+        }
         BGMSlider.value = soundSettings.BGMusicVolume;
         SFXSlider.value = soundSettings.SFXVolume;
 
@@ -49,7 +62,7 @@ public class Sounds : GenericSingleton<Sounds>
             bgMusicSource.mute = value; 
             soundSettings.MuteBGM = value;
             if (!value)
-                ChangeBGM(soundSettings.BGMs[SceneManager.GetActiveScene().buildIndex]);
+                ChangeBGM(Resources.Load(Path.Combine("BGMS",soundSettings.BGMs[SceneManager.GetActiveScene().buildIndex])) as AudioClip);
             else
                 bgMusicSource.Stop();
         });
@@ -62,7 +75,7 @@ public class Sounds : GenericSingleton<Sounds>
                 return;
 
             if (!bgMusicSource.mute)
-                ChangeBGM(soundSettings.BGMs[scene.buildIndex]);
+                ChangeBGM(Resources.Load(Path.Combine("BGMS", soundSettings.BGMs[scene.buildIndex])) as AudioClip);
         };
     }
 
@@ -103,5 +116,10 @@ public class Sounds : GenericSingleton<Sounds>
             time -= Time.deltaTime;
             yield return new WaitForEndOfFrame();
         }
+    }
+
+    private void OnApplicationQuit()
+    {
+        soundSettings.ToJson();
     }
 }

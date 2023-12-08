@@ -1,27 +1,53 @@
 using UnityEngine;
-using UnityEditor;
 using System.Collections.Generic;
+using System.IO;
+using Newtonsoft.Json;
+using System;
+using Lecture;
 
-public class SoundSettings : ScriptableObject
+[Serializable]
+public class SoundSettings 
 {
     [Range(0f, 1f)]
     public float BGMusicVolume = 0.85f;
     [Range(0f, 1f)]
     public float SFXVolume = 0.3f;
     public bool MuteBGM, MuteSFX;
+    [NonSerialized]
+    public bool Created;
+    public List<string> BGMs;
 
-    public List<AudioClip> BGMs;
+    public SoundSettings() { }
 
-    [MenuItem("Assets/Create/Sound Settings")]
-    public static void CreateMyAsset()
+    public SoundSettings(float bgm, float sfx, bool muteBGM, bool muteSFX, List<string> names) 
     {
-        SoundSettings asset = CreateInstance<SoundSettings>();
+        BGMusicVolume = bgm;
+        SFXVolume = sfx;
+        MuteBGM = muteBGM;
+        MuteSFX = muteSFX;
+        BGMs = names;
+    }
 
-        ProjectWindowUtil.CreateAsset(asset, "Sound Settings.asset");
-        AssetDatabase.SaveAssets();
+    public void ToJson() 
+    {
+        string name = "SoundSettings.json";
+        Util.SaveData(this, name);
+    }
 
-        EditorUtility.FocusProjectWindow();
+    public void FromJson() 
+    {
+        string filePath = Path.Combine(Application.persistentDataPath,"Saved Data", "SoundSettings.json");
 
-        Selection.activeObject = asset;
+        if (!File.Exists(filePath))
+            return;
+        SoundSettings ss = Util.LoadData<SoundSettings>(filePath);
+
+        BGMusicVolume = ss.BGMusicVolume; 
+        SFXVolume = ss.SFXVolume;
+        MuteBGM = ss.MuteBGM;
+        MuteSFX = ss.MuteSFX;
+        BGMs = ss.BGMs;
+
+        Created = true;
     }
 }

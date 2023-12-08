@@ -21,7 +21,7 @@ public class PlayerDataObject : ScriptableObject
         Position = data.Position.ToVector3();
         Rotation = data.Rotation.ToQuaternion();
     }
-
+#if UNITY_EDITOR
     [MenuItem("Assets/Create/Player Data")]
     public static void CreateMyAsset()
     {
@@ -34,7 +34,7 @@ public class PlayerDataObject : ScriptableObject
 
         Selection.activeObject = asset;
     }
-
+#endif
     public string ToJson()
     {
         return JsonUtility.ToJson(this, true);
