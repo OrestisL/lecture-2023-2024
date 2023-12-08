@@ -1,6 +1,8 @@
 using UnityEngine.SceneManagement;
 using System.Collections;
 using UnityEngine;
+using Newtonsoft.Json;
+using System.IO;
 
 namespace Lecture
 {
@@ -25,38 +27,42 @@ namespace Lecture
 
     public class Util
     {
-        public static void ChangeScene(int index)
+
+        public static void SaveData<T>(T data, string name) where T : class
         {
-            //get loading scene
-            SceneManager.LoadScene(0);
-            SceneLoader.Instance.StartCoroutine(ChangeSceneAsync(index));
-        }
-        public static void ChangeScene(string name)
-        {
-            //get loading scene
-            SceneManager.LoadScene(0);
-            SceneLoader.Instance.StartCoroutine(ChangeSceneAsync(name));
-        }
-        private static IEnumerator ChangeSceneAsync(int index)
-        {
-            AsyncOperation asyncOp = SceneManager.LoadSceneAsync(index);
-            //asyncOp.allowSceneActivation = false;
-            while (!asyncOp.isDone)
+            string savePath = Path.Combine(Application.persistentDataPath, "Saved Data");
+            if (!Directory.Exists(savePath))
+                Directory.CreateDirectory(savePath);
+
+            string json = JsonConvert.SerializeObject(data);
+
+            string fullPath = Path.Combine(savePath, name);
+            if (!File.Exists(fullPath))
+                File.Create(fullPath).Close();
+
+            using (StreamWriter sw = new StreamWriter(fullPath))
             {
-                yield return null;
+                sw.Write(json);
             }
-
         }
 
-        private static IEnumerator ChangeSceneAsync(string sceneName) 
+        public static T LoadData<T>(string fullPath) where T : class
         {
-            AsyncOperation asyncOp = SceneManager.LoadSceneAsync(sceneName);
-            //asyncOp.allowSceneActivation = false;
-            while (!asyncOp.isDone)
+            T data = null;
+            using (StreamReader sr = new StreamReader(fullPath)) 
             {
-                yield return null;
+                data = JsonConvert.DeserializeObject<T>(sr.ReadToEnd());
             }
+            return data;
+        }
 
+        public static void LoadData<T>(string fullPath, out T data) where T : class
+        {
+            data = default;
+            using (StreamReader sr = new StreamReader(fullPath))
+            {
+                data = JsonConvert.DeserializeObject<T>(sr.ReadToEnd());
+            }
         }
     }
 

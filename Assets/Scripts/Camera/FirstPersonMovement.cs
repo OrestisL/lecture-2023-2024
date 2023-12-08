@@ -14,6 +14,11 @@ public class FirstPersonMovement : MonoBehaviour
         mainCam = Camera.main;
     }
 
+    public void SetStartingValues(float x, float y)
+    {
+        rotX = x;
+        rotY = y;
+    }
     public void CameraRotation(Vector2 delta)
     {
         rotY += delta.x * inputSensitivity * Time.deltaTime;

@@ -65,11 +65,11 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
     private string mapJson;
     private string saveDir;
 
-    public float gravity;
+    public float gravity = -10.0f;
     public float jumpHeight = 5;
     private bool jumpIsPressed;
 
-    public float speed, runSpeed;
+    public float speed = 3.0f, runSpeed = 5.0f;
     public bool isRunning = false;
     private Vector3 velocity;
     float lowEnergySpeed;
@@ -112,16 +112,17 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
             if (!TryGetComponent<PlayerInput>(out playerInput))
                 playerInput = gameObject.AddComponent<PlayerInput>();
         }
+        FindCamera();
         InitializeInputs();
     }
     private void Start()
     {
         SceneManager.sceneLoaded += OnSceneLoaded;
 
+
     }
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-
         if (previousSceneIndex == scene.buildIndex)
             return;
 
@@ -130,8 +131,17 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
         {
             perspectiveType = PerspectiveType.thirdPerson;
         }
+        FindCamera();
         InitializeInputs();
     }
+
+    private void FindCamera() 
+    {
+        cam = Camera.main;
+        camCollision = cam.GetComponent<CameraCollision>();
+        camMovement = cam.GetComponentInParent<CameraMovement>();
+    }
+
     private void InitializeInputs()
     {
         //create input actions and action maps
@@ -144,9 +154,7 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
             controller = player.GetComponent<CharacterController>();
 
         if (anim == null)
-            anim = player.GetComponent<Animator>();
-
-        cam = Camera.main;
+            anim = player.GetComponent<Animator>();       
 
         switch (perspectiveType)
         {
