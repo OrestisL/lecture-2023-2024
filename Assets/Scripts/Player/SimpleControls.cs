@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 public class SimpleControls : MonoBehaviour
 {
     public InputActionAsset controls;
-    [SerializeField] private NavMeshAgent currentAgent;
+    [SerializeField] private PatrolMovement patrolMovement;
     public Camera main, cam;
 
     private void Start()
@@ -18,9 +18,9 @@ public class SimpleControls : MonoBehaviour
             Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.value);
             if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
             {
-                if (currentAgent == null) //no agent selected
+                if (patrolMovement == null) //no agent selected
                 {
-                    if (hit.transform.TryGetComponent(out currentAgent))
+                    if (hit.transform.TryGetComponent(out patrolMovement))
                     {
                         return;
                     }
@@ -33,14 +33,15 @@ public class SimpleControls : MonoBehaviour
                         cube.transform.position = navHit.position;
                         cube.transform.localScale = Vector3.one * 0.5f;
                         cube.transform.up = hit.normal;
-                        currentAgent.SetDestination(navHit.position);
+                        patrolMovement.AddPosition(navHit.position);
+                        Destroy(cube, 2f);
                     }
                 }
 
             }
         };
 
-        controls.FindAction("rightclick").performed += context => { currentAgent = null; };
+        controls.FindAction("rightclick").performed += context => { patrolMovement = null; };
 
         controls.FindAction("middleclick").performed += ctx => 
         {

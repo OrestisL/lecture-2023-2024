@@ -33,12 +33,22 @@ public class CharacterSetup : MonoBehaviour
     private void SetupSavedGames()
     {
         string path = Path.Combine(Application.persistentDataPath, "Saved Data");
+        if (!Directory.Exists(path))
+        {
+            Debug.Log("No saved data found");
+            return;
+        }
+
         string[] files = Directory.GetFiles(path);
         foreach (string file in files)
         {
-            GameObject button = Instantiate(buttonPrefab, savedGamesButtonsParent);
             string fileName = Path.GetFileName(file);
+            if (fileName.Equals("SoundSettings.json"))
+                continue;
+
+            GameObject button = Instantiate(buttonPrefab, savedGamesButtonsParent);
             string name = fileName.Split('_')[0];
+            button.name = name;
             button.GetComponent<SavedGameButton>().Init(() => {
                 PlayerData.Instance.LoadPlayerData(file);
                 LoadingScreen.Instance.LoadLevel(PlayerData.Instance.data.SceneIndex);
