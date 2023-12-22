@@ -12,7 +12,7 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
 {
-    [SerializeField] private CharacterController controller;
+    public CharacterController controller;
     [SerializeField] private Camera cam;
     [SerializeField] private CameraCollision camCollision;
     [SerializeField] private CameraMovement camMovement;
@@ -55,6 +55,7 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
     public InputAction fireAction;
     public InputAction altFireAction;
     public InputAction runAction;
+    public InputAction crouchAction;
     public InputAction jumpAction;
     /// <summary>
     /// Input action maps are used to store input actions.
@@ -69,8 +70,11 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
     public float jumpHeight = 5;
     private bool jumpIsPressed;
 
-    public float speed = 3.0f, runSpeed = 5.0f;
+    public float speed = 3.0f, runSpeed = 5.0f, crouchSpeed = 2.0f;
     public bool isRunning = false;
+    public bool isCrouching = false;
+    public float crouchCeilingDistance = 1.0f;
+    private bool requestStand = false;
     private Vector3 velocity;
     float lowEnergySpeed;
     private float turnSmoothVelocity, turnSmoothTime = 0.1f;
@@ -84,7 +88,7 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
     private NavMeshAgent currentAgent;
     private int previousSceneIndex;
     public override void Awake()
-   {
+    {
         base.Awake();
 
         saveDir = Path.Combine(Application.persistentDataPath, "InputJson");
@@ -118,8 +122,6 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
     private void Start()
     {
         SceneManager.sceneLoaded += OnSceneLoaded;
-
-
     }
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
@@ -135,7 +137,7 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
         InitializeInputs();
     }
 
-    private void FindCamera() 
+    private void FindCamera()
     {
         cam = Camera.main;
         camCollision = cam.GetComponent<CameraCollision>();
@@ -154,7 +156,7 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
             controller = player.GetComponent<CharacterController>();
 
         if (anim == null)
-            anim = player.GetComponent<Animator>();       
+            anim = player.GetComponent<Animator>();
 
         switch (perspectiveType)
         {
@@ -234,6 +236,10 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
             runAction = keyboardMap.AddAction("Run", binding: "<keyboard>/leftShift");
             runAction = gamepadMap.AddAction("Run", binding: "<Gamepad>/leftStickPress");
 
+            //crouch
+            crouchAction = keyboardMap.AddAction("Crouch", binding: "<keyboard>/LeftCtrl");
+            crouchAction = gamepadMap.AddAction("Crouch", binding: "<Gamepad>/LeftShoulder");
+
             //zoom
             zoomAction = keyboardMap.AddAction("Zoom", binding: "<Mouse>/Scroll/Y", processors: "clamp(min=-1,max=1)");
             zoomAction = gamepadMap.AddAction("Zoom");
@@ -277,8 +283,24 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
 
         runAction = playerInput.currentActionMap.FindAction("Run");
         //runAction.started += context => isRunning = true;
-        runAction.performed += context => isRunning = true;
-        runAction.canceled += context => isRunning = false;
+        runAction.performed += _ => isRunning = true;
+        runAction.canceled += _ => isRunning = false;
+
+        //while holding left ctrl, crouch
+        crouchAction = playerInput.currentActionMap.FindAction("Crouch");
+        crouchAction.performed += _ =>
+        {
+            requestStand = false;
+            isCrouching = true;
+            anim.SetBool("Crouching", isCrouching);
+        };
+        crouchAction.canceled += _ =>
+        {
+            requestStand = true;
+        };
+
+        //press to togle between crouch and standing
+        //crouchAction.started += _ => isCrouching = !isCrouching;
 
         lookAction = playerInput.currentActionMap.FindAction("Look");
         lookAction.performed += context =>
@@ -336,7 +358,6 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
             {
                 if (perspectiveType == PerspectiveType.thirdPerson)
                 {
-                    Debug.Log(context.ReadValue<float>());
                     camCollision.Zoom(context.ReadValue<float>() * scrollSensitivity);
                 }
             };
@@ -378,12 +399,14 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
                 InputEvents();
                 break;
         }
+        playerInput.currentActionMap.Enable();
         Debug.Log(string.Format("New map is {0}", playerInput.currentActionMap.name));
     }
 
     private void Update()
     {
         Move();
+        Crouch();
         ApplyGravity();
         GamepadZoom();
     }
@@ -391,13 +414,27 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
     void ApplyGravity()
     {
         controller.Move(velocity * Time.deltaTime);
-
         if (controller.isGrounded && velocity.y < 0)
             velocity.y = gravity;
         else if (!controller.isGrounded)
             velocity.y += gravity * Time.deltaTime;
+        
+        if ((controller.collisionFlags & CollisionFlags.Above) != 0)
+        {
+            velocity.y = gravity * 0.1f;
+        }
+        anim.SetBool("Grounded", controller.isGrounded);
+
     }
 
+    void Crouch() 
+    {
+        if (requestStand && !Physics.Raycast(player.transform.position, Vector3.up, crouchCeilingDistance, camCollision.obstacleLayer))
+        {
+            isCrouching = false;
+            anim.SetBool("Crouching", isCrouching);
+        }
+    }
 
     void Move()
     {
@@ -422,23 +459,26 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
             {
                 currentSpeed = runSpeed;
             }
-
+            else if (isCrouching)
+            {
+                currentSpeed = crouchSpeed;
+            }
             Vector3 moveDirection = Quaternion.Euler(0, targetAngle, 0) * Vector3.forward * currentSpeed;
+
             controller.Move(Time.deltaTime * moveDirection);
 
-            //anim.SetFloat("Speed", currentSpeed);
+            anim.SetFloat("Speed", currentSpeed);
         }
-        //else
-        //anim.SetFloat("Speed", 0);
+        else
+            anim.SetFloat("Speed", 0);
     }
 
     void Jump(float height)
     {
-        if (controller.isGrounded)
+        if (controller.isGrounded && !isCrouching)
         {
             velocity.y = Mathf.Sqrt(-2 * gravity * height);
         }
-
     }
 
     void GamepadZoom()
@@ -448,6 +488,7 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
             camCollision.Zoom(zoomAction.ReadValue<float>() * scrollSensitivity * 0.01f);
         }
     }
+
 
     private void OnApplicationFocus(bool focus)
     {
@@ -479,5 +520,4 @@ public class SampleInputMapCreation : GenericSingleton<SampleInputMapCreation>
             sw.Close();
         }
     }
-
 }

@@ -41,7 +41,7 @@ public class PrefabInstantiation : MonoBehaviour
         //{
         //    props = pf.AddComponent<ItemProps>();
         //    Debug.Log(props.name + " " + props.Info);
-        //}Z
+        //}
         //for loop
         //for (int i = 0; i < maxCount; i++)
         //{
